@@ -161,7 +161,6 @@ Stm *Parser::parseStatement()
             cout << "Error: 'ENDWHILE' token was expected after the while statement list" << endl;
             exit(1);
         }
-
         s = new WhileStatement(e, slist);
     }
     else if (match(Token::FOR))
@@ -210,8 +209,7 @@ Stm *Parser::parseStatement()
 
 Exp *Parser::parseAExp()
 {
-    Exp *left;
-    left = parseBExp();
+    Exp *left = parseBExp();
     if (match(Token::AND) || match(Token::OR))
     {
         BinaryOp op;
@@ -223,8 +221,7 @@ Exp *Parser::parseAExp()
         {
             op = OR_OP;
         }
-        Exp *right;
-        right = parseBExp();
+        Exp *right = parseBExp();
         left = new BinaryExp(left, right, op);
     }
     return left;
@@ -233,17 +230,10 @@ Exp *Parser::parseAExp()
 Exp *Parser::parseBExp()
 {
     Exp *left;
-    bool isNegated = false;
     if (match(Token::NOT))
-    {
-        isNegated = true;
-    }
-
-    left = parseCExp();
-    if (isNegated)
-    {
-        left = new NotExp(left);
-    }
+        left = new NotExp(parseCExp());
+    else
+        left = parseCExp();
     return left;
 }
 
@@ -322,8 +312,6 @@ Exp *Parser::parseTerm()
 Exp *Parser::parseFactor()
 {
     Exp *e;
-    Exp *e1;
-    Exp *e2;
     if (match(Token::NUM))
     {
         return new NumberExp(stoi(previous->text));
@@ -334,6 +322,8 @@ Exp *Parser::parseFactor()
     }
     else if (match(Token::IFEXP))
     {
+        Exp *e1;
+        Exp *e2;
         match(Token::LEFT_PARENTHESIS);
         e = parseAExp();
         match(Token::COMMA);

@@ -224,10 +224,12 @@ int EVALVisitor::visit(BinaryExp *exp)
         break;
     case GREATER_EQUAL_OP:
         result = v1 >= v2;
+        break;
     case AND_OP:
-        result = v1 and v2;
+        result = v1 && v2;
+        break;
     case OR_OP:
-        result = v1 or v2;
+        result = v1 || v2;
         break;
 
     default:
@@ -261,14 +263,10 @@ int EVALVisitor::visit(IfExp *exp)
 
 int EVALVisitor::visit(NotExp *exp)
 {
-    if (exp->inner->accept(this) == 0) // true
-    {
-        return 1;
-    }
+    if (exp->inner->accept(this) > 0) // Any positive number at all
+        return 0;                     // nots
     else
-    {
-        return 0;
-    }
+        return 1; // if 0 or less, return 1
 }
 
 void EVALVisitor::visit(AssignStatement *stm)
