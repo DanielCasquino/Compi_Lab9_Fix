@@ -4,28 +4,21 @@
 #include <string>
 #include <unordered_map>
 #include <list>
-
 #include "visitor.h"
-
 using namespace std;
-
 enum BinaryOp
 {
-    // arithmetic ops
-    PLUS_OP,
-    MINUS_OP,
+    ADD_OP,
+    SUB_OP,
     MUL_OP,
     DIV_OP,
-};
-
-enum BooleanOp
-{
-    // boolean ops
-    LESS_THAN_OP,
-    GREATER_THAN_OP,
-    EQUALS_OP,
-    LESS_EQUALS_OP,
-    GREATER_EQUALS_OP
+    LESS_OP,
+    EQUAL_OP,
+    GREATER_OP,
+    LESS_EQUAL_OP,
+    GREATER_EQUAL_OP,
+    AND_OP,
+    OR_OP
 };
 
 class Exp
@@ -33,8 +26,7 @@ class Exp
 public:
     virtual int accept(Visitor *visitor) = 0;
     virtual ~Exp() = 0;
-    static char binopToChar(BinaryOp op);
-    static string boolOpToString(BooleanOp op);
+    static string binopToChar(BinaryOp op);
 };
 
 class BinaryExp : public Exp
@@ -45,16 +37,6 @@ public:
     BinaryExp(Exp *l, Exp *r, BinaryOp op);
     int accept(Visitor *visitor);
     ~BinaryExp();
-};
-
-class BooleanExp : public Exp
-{
-public:
-    Exp *left, *right;
-    BooleanOp op;
-    BooleanExp(Exp *l, Exp *r, BooleanOp op);
-    int accept(Visitor *visitor);
-    ~BooleanExp();
 };
 
 class NumberExp : public Exp
@@ -73,6 +55,24 @@ public:
     IdentifierExp(const std::string &n);
     int accept(Visitor *visitor);
     ~IdentifierExp();
+};
+
+class IfExp : public Exp
+{
+public:
+    Exp *cond, *left, *right;
+    IfExp(Exp *cond, Exp *left, Exp *right);
+    int accept(Visitor *visitor);
+    ~IfExp();
+};
+
+class NotExp : public Exp
+{
+public:
+    Exp *inner;
+    NotExp(Exp *exp);
+    int accept(Visitor *visitor);
+    ~NotExp();
 };
 
 class Stm
@@ -99,6 +99,37 @@ public:
     PrintStatement(Exp *e);
     int accept(Visitor *visitor);
     ~PrintStatement();
+};
+
+class IfStatement : public Stm
+{
+public:
+    Exp *condition;
+    list<Stm *> then;
+    list<Stm *> els;
+    IfStatement(Exp *condition, list<Stm *> then, list<Stm *> els);
+    int accept(Visitor *visitor);
+    ~IfStatement();
+};
+
+class WhileStatement : public Stm
+{
+public:
+    Exp *condition;
+    list<Stm *> slist;
+    WhileStatement(Exp *condition, list<Stm *> slist);
+    int accept(Visitor *visitor);
+    ~WhileStatement();
+};
+
+class ForStatement : public Stm
+{
+public:
+    Exp *start, *stop, *step;
+    list<Stm *> slist;
+    ForStatement(Exp *start, Exp *stop, Exp *step, list<Stm *> slist);
+    int accept(Visitor *visitor);
+    ~ForStatement();
 };
 
 class Program

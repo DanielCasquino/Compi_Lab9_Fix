@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "token.h"
 
 using namespace std;
@@ -7,6 +6,8 @@ using namespace std;
 Token::Token(Type type) : type(type) { text = ""; }
 
 Token::Token(Type type, char c) : type(type) { text = string(1, c); }
+
+Token::Token(Type type, string s) : type(type) { text = s; }
 
 Token::Token(Type type, const string &source, int first, int last) : type(type)
 {
@@ -19,7 +20,7 @@ std::ostream &operator<<(std::ostream &outs, const Token &tok)
     switch (tok.type)
     {
     case Token::ADD:
-        outs << "ADD";
+        outs << "PLUS";
         break;
     case Token::SUB:
         outs << "SUB";
@@ -37,10 +38,10 @@ std::ostream &operator<<(std::ostream &outs, const Token &tok)
         outs << "ERR";
         break;
     case Token::RIGHT_PARENTHESIS:
-        outs << "RIGHT_PARENTHESIS";
+        outs << "PD";
         break;
     case Token::LEFT_PARENTHESIS:
-        outs << "LEFT_PARENTHESIS";
+        outs << "PI";
         break;
     case Token::END:
         outs << "END";
@@ -55,22 +56,64 @@ std::ostream &operator<<(std::ostream &outs, const Token &tok)
         outs << "ASSIGN";
         break;
     case Token::SEMICOLON:
-        outs << "SEMICOLON";
+        outs << "PC";
         break;
-    case Token::LESS_THAN:
-        outs << "LESS_THAN";
+    case Token::COMMA:
+        outs << "COMA";
         break;
-    case Token::GREATER_THAN:
-        outs << "GREATER_THAN";
+    case Token::LESS:
+        outs << "LT";
         break;
-    case Token::EQUALS:
-        outs << "EQUALS";
+    case Token::GREATER:
+        outs << "GT";
         break;
-    case Token::LESS_EQUALS:
-        outs << "LESS_EQUALS";
+    case Token::EQUAL:
+        outs << "EQ";
         break;
-    case Token::GREATER_EQUALS:
-        outs << "GREATER_EQUALS";
+    case Token::LESS_EQUAL:
+        outs << "LE";
+        break;
+    case Token::GREATER_EQUAL:
+        outs << "GE";
+        break;
+    case Token::AND:
+        outs << "AND";
+        break;
+    case Token::OR:
+        outs << "OR";
+        break;
+    case Token::NOT:
+        outs << "NOT";
+        break;
+    case Token::IF:
+        outs << "IF";
+        break;
+    case Token::THEN:
+        outs << "THEN";
+        break;
+    case Token::ELSE:
+        outs << "ELSE";
+        break;
+    case Token::ENDIF:
+        outs << "ENDIF";
+        break;
+    case Token::WHILE:
+        outs << "WHILE";
+        break;
+    case Token::DO:
+        outs << "DO";
+        break;
+    case Token::ENDWHILE:
+        outs << "ENDWHILE";
+        break;
+    case Token::FOR:
+        outs << "FOR";
+        break;
+    case Token::ENDFOR:
+        outs << "ENDFOR";
+        break;
+    case Token::IFEXP:
+        outs << "IFEXP";
         break;
     default:
         outs << "UNKNOWN";

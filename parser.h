@@ -13,8 +13,11 @@ private:
     bool check(Token::Type ttype);
     bool advance();
     bool isAtEnd();
+    list<Stm *> parseStmList();
+    Exp *parseAExp();
+    Exp *parseBExp();
+    Exp *parseCExp();
     Exp *parseExpression();
-    Exp *parseBoolExpression();
     Exp *parseTerm();
     Exp *parseFactor();
 

@@ -1,6 +1,5 @@
 #include <iostream>
 #include <stdexcept>
-
 #include "token.h"
 #include "scanner.h"
 #include "exp.h"
@@ -36,7 +35,7 @@ bool Parser::advance()
         previous = temp;
         if (check(Token::ERR))
         {
-            cout << "Analysis error, unrecognized character: " << current->text << "\n";
+            cout << "Error de análisis, carácter no reconocido: " << current->text << endl;
             exit(1);
         }
         return true;
@@ -55,7 +54,7 @@ Parser::Parser(Scanner *sc) : scanner(sc)
     current = scanner->nextToken();
     if (current->type == Token::ERR)
     {
-        cout << "Error at first token: " << current->text << "\n";
+        cout << "Error en el primer token: " << current->text << endl;
         exit(1);
     }
 }
@@ -65,14 +64,7 @@ Program *Parser::parseProgram()
     Program *p = new Program();
     try
     {
-        while (!isAtEnd())
-        {
-            p->add(parseStatement());
-            if (!isAtEnd() && !match(Token::SEMICOLON))
-            {
-                throw runtime_error("Error: se esperaba ';' al final de la declaración.");
-            }
-        }
+        p->slist = parseStmList();
     }
     catch (const exception &e)
     {
@@ -81,6 +73,17 @@ Program *Parser::parseProgram()
         exit(1);
     }
     return p;
+}
+
+list<Stm *> Parser::parseStmList()
+{
+    list<Stm *> slist;
+    slist.push_back(parseStatement());
+    while (match(Token::SEMICOLON))
+    {
+        slist.push_back(parseStatement());
+    }
+    return slist;
 }
 
 Stm *Parser::parseStatement()
@@ -103,7 +106,7 @@ Stm *Parser::parseStatement()
             cout << "Error: se esperaba un '=' después del identificador." << endl;
             exit(1);
         }
-        e = parseBoolExpression();
+        e = parseAExp();
         s = new AssignStatement(lex, e);
     }
     else if (match(Token::PRINT))
@@ -113,13 +116,89 @@ Stm *Parser::parseStatement()
             cout << "Error: se esperaba un '(' después de 'print'." << endl;
             exit(1);
         }
-        e = parseBoolExpression();
+        e = parseAExp();
         if (!match(Token::RIGHT_PARENTHESIS))
         {
             cout << "Error: se esperaba un ')' después de la expresión." << endl;
             exit(1);
         }
         s = new PrintStatement(e);
+    }
+    else if (match(Token::IF))
+    {
+        e = parseAExp();
+        if (!match(Token::THEN))
+        {
+            cout << "Error: se esperaba 'then' después de la expresión." << endl;
+            exit(1);
+        }
+        list<Stm *> then;
+        list<Stm *> els;
+        then = parseStmList();
+        if (match(Token::ELSE))
+        {
+            els = parseStmList();
+        }
+        if (!match(Token::ENDIF))
+        {
+            cout << "Error: se esperaba 'end' al final de la declaración." << endl;
+            exit(1);
+        }
+        s = new IfStatement(e, then, els);
+    }
+    else if (match(Token::WHILE))
+    {
+        e = parseAExp();
+        if (!match(Token::DO))
+        {
+            cout << "Error: 'DO' token was expected after the while statement expression" << endl;
+            exit(1);
+        }
+        list<Stm *> slist;
+        slist = parseStmList();
+        if (!match(Token::ENDWHILE))
+        {
+            cout << "Error: 'ENDWHILE' token was expected after the while statement list" << endl;
+            exit(1);
+        }
+
+        s = new WhileStatement(e, slist);
+    }
+    else if (match(Token::FOR))
+    {
+        if (!match(Token::LEFT_PARENTHESIS))
+        {
+            cout << "Error: Missing left parenthesis to open FOR AExp list" << endl;
+            exit(1);
+        }
+        Exp *a = parseAExp();
+        if (!match(Token::COMMA))
+        {
+            cout << "Error: Missing comma after first AExp in FOR statement" << endl;
+            exit(1);
+        }
+        Exp *b = parseAExp();
+        if (!match(Token::COMMA))
+        {
+            cout << "Error: Missing comma after second AExp in FOR statement" << endl;
+            exit(1);
+        }
+        Exp *c = parseAExp();
+        if (!match(Token::RIGHT_PARENTHESIS))
+        {
+            cout << "Error: Missing right parenthesis to close FOR AExp list" << endl;
+            exit(1);
+        }
+
+        list<Stm *> slist;
+        slist = parseStmList();
+
+        if (!match(Token::ENDFOR))
+        {
+            cout << "Error: Missing ENDFOR token to close FOR statement" << endl;
+            exit(1);
+        }
+        s = new ForStatement(a, b, c, slist);
     }
     else
     {
@@ -129,34 +208,73 @@ Stm *Parser::parseStatement()
     return s;
 }
 
-Exp *Parser::parseBoolExpression()
+Exp *Parser::parseAExp()
+{
+    Exp *left;
+    left = parseBExp();
+    if (match(Token::AND) || match(Token::OR))
+    {
+        BinaryOp op;
+        if (previous->type == Token::AND)
+        {
+            op = AND_OP;
+        }
+        else if (previous->type == Token::OR)
+        {
+            op = OR_OP;
+        }
+        Exp *right;
+        right = parseBExp();
+        left = new BinaryExp(left, right, op);
+    }
+    return left;
+}
+
+Exp *Parser::parseBExp()
+{
+    Exp *left;
+    bool isNegated = false;
+    if (match(Token::NOT))
+    {
+        isNegated = true;
+    }
+
+    left = parseCExp();
+    if (isNegated)
+    {
+        left = new NotExp(left);
+    }
+    return left;
+}
+
+Exp *Parser::parseCExp()
 {
     Exp *left = parseExpression();
-    while (match(Token::LESS_THAN) || match(Token::EQUALS) || match(Token::GREATER_THAN) || match(Token::GREATER_EQUALS) || match(Token::LESS_EQUALS))
+    if (match(Token::LESS) || match(Token::EQUAL) || match(Token::GREATER) || match(Token::GREATER_EQUAL) || match(Token::LESS_EQUAL))
     {
-        BooleanOp op;
-        if (previous->type == Token::LESS_THAN)
+        BinaryOp op;
+        if (previous->type == Token::LESS)
         {
-            op = LESS_THAN_OP;
+            op = LESS_OP;
         }
-        else if (previous->type == Token::EQUALS)
+        else if (previous->type == Token::EQUAL)
         {
-            op = EQUALS_OP;
+            op = EQUAL_OP;
         }
-        else if (previous->type == Token::GREATER_THAN)
+        else if (previous->type == Token::GREATER)
         {
-            op = GREATER_THAN_OP;
+            op = GREATER_OP;
         }
-        else if (previous->type == Token::GREATER_EQUALS)
+        else if (previous->type == Token::LESS_EQUAL)
         {
-            op = GREATER_EQUALS_OP;
+            op = LESS_EQUAL_OP;
         }
-        else if (previous->type == Token::LESS_EQUALS)
+        else if (previous->type == Token::GREATER_EQUAL)
         {
-            op = LESS_EQUALS_OP;
+            op = GREATER_EQUAL_OP;
         }
         Exp *right = parseExpression();
-        left = new BooleanExp(left, right, op);
+        left = new BinaryExp(left, right, op);
     }
     return left;
 }
@@ -169,11 +287,11 @@ Exp *Parser::parseExpression()
         BinaryOp op;
         if (previous->type == Token::ADD)
         {
-            op = PLUS_OP;
+            op = ADD_OP;
         }
         else if (previous->type == Token::SUB)
         {
-            op = MINUS_OP;
+            op = SUB_OP;
         }
         Exp *right = parseTerm();
         left = new BinaryExp(left, right, op);
@@ -204,6 +322,8 @@ Exp *Parser::parseTerm()
 Exp *Parser::parseFactor()
 {
     Exp *e;
+    Exp *e1;
+    Exp *e2;
     if (match(Token::NUM))
     {
         return new NumberExp(stoi(previous->text));
@@ -212,9 +332,20 @@ Exp *Parser::parseFactor()
     {
         return new IdentifierExp(previous->text);
     }
+    else if (match(Token::IFEXP))
+    {
+        match(Token::LEFT_PARENTHESIS);
+        e = parseAExp();
+        match(Token::COMMA);
+        e1 = parseAExp();
+        match(Token::COMMA);
+        e2 = parseAExp();
+        match(Token::RIGHT_PARENTHESIS);
+        return new IfExp(e, e1, e2);
+    }
     else if (match(Token::LEFT_PARENTHESIS))
     {
-        e = parseExpression();
+        e = parseAExp();
         if (!match(Token::RIGHT_PARENTHESIS))
         {
             cout << "Falta paréntesis derecho" << endl;
